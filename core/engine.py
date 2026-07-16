@@ -168,7 +168,7 @@ class Scanner:
 
         # 通配符检测：根据 path 选择对应的 profile
         profile = self.wildcard_ext if _has_ext(path) else self.wildcard_root
-        if not self.args.no_wildcard and profile.is_wildcard(status, content_length, content, content_type, redirect_path):
+        if self.args.wildcard and profile.is_wildcard(status, content_length, content, content_type, redirect_path):
             # --show-diff: 输出被过滤路径与 base 的差异
             if getattr(self.args, 'show_diff', False) and profile.base_content:
                 self._show_diff_output(path, content, profile)
@@ -274,7 +274,7 @@ class Scanner:
         async with aiohttp.ClientSession(connector=connector) as session:
             # 异步通配符探测（复用同一个 session）
             # 恢复时跳过探测，直接用已有 profile
-            if not self.args.no_wildcard and not self._scanned_paths:
+            if self.args.wildcard and not self._scanned_paths:
                 await self.wildcard_root.detect_async(session, self.args, self.headers)
                 await self.wildcard_ext.detect_async(session, self.args, self.headers, ext=".php")
 

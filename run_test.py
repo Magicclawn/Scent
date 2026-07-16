@@ -219,11 +219,11 @@ def test_soft_404():
     server = start_server(["--soft-404"])
     try:
         print("[*] 通配符检测 ON")
-        out_on = run_scanner_bench()
+        out_on = run_scanner_bench(["--wildcard"])
         found_on = parse_found_paths(out_on, EXPECTED)
 
         print("[*] 通配符检测 OFF")
-        out_off = run_scanner_bench(["--no-wildcard"])
+        out_off = run_scanner_bench()
         found_off = parse_found_paths(out_off, EXPECTED)
 
         recall_on, fp_on, _, _ = calc_stats(found_on, EXPECTED)
@@ -250,11 +250,11 @@ def test_multi_404():
     server = start_server(["--multi-404"])
     try:
         print("[*] 通配符检测 ON")
-        out_on = run_scanner_bench()
+        out_on = run_scanner_bench(["--wildcard"])
         found_on = parse_found_paths(out_on, EXPECTED)
 
         print("[*] 通配符检测 OFF")
-        out_off = run_scanner_bench(["--no-wildcard"])
+        out_off = run_scanner_bench()
         found_off = parse_found_paths(out_off, EXPECTED)
 
         recall_on, fp_on, _, _ = calc_stats(found_on, EXPECTED)
