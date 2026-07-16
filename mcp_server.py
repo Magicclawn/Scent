@@ -1,4 +1,4 @@
-"""scent MCP Server — 通过 MCP 协议暴露目录扫描能力给 agent"""
+"""scent MCP Server — expose web fuzzing to AI agents"""
 import argparse
 import asyncio
 import os
@@ -15,83 +15,61 @@ from core.config import random_ua
 from core.engine import Scanner
 
 
-# ─── 工具定义 ──────────────────────────────────────────────
-
 TOOLS = [
     Tool(
         name="run_scan",
-        description="Run directory scan against a target URL with a wordlist",
+        description="Scan a target URL for hidden directories and files",
         inputSchema={
             "type": "object",
             "properties": {
                 "url": {"type": "string", "description": "Target URL, e.g. http://example.com"},
-                "wordlist": {"type": "string", "description": "Path to wordlist file, or name of built-in wordlist (common, php, api, backup, dicc)"},
-                "method": {"type": "string", "default": "GET", "enum": ["GET", "POST", "PUT", "HEAD", "DELETE", "PATCH", "OPTIONS"]},
-                "concurrency": {"type": "integer", "default": 50},
-                "extensions": {"type": "string", "description": "Comma-separated extensions, e.g. php,asp,jsp"},
+                "wordlist": {"type": "string", "description": "Wordlist name (quick/standard/full) or path to file"},
+                "concurrency": {"type": "integer", "default": 20},
+                "extensions": {"type": "string", "description": "Comma-separated extensions, e.g. php,html"},
                 "recursive": {"type": "boolean", "default": False},
                 "depth": {"type": "integer", "default": 3},
-                "no_wildcard": {"type": "boolean", "default": False, "description": "Disable wildcard detection"},
                 "delay": {"type": "number", "default": 0, "description": "Delay between requests in seconds"},
             },
-            "required": ["url", "wordlist"],
+            "required": ["url"],
         },
     ),
     Tool(
         name="list_wordlists",
-        description="List built-in and available wordlist files from dirsearch db",
+        description="List available built-in wordlists",
         inputSchema={"type": "object", "properties": {}, "required": []},
     ),
 ]
 
 
-# ─── 字典解析 ──────────────────────────────────────────────
-
 BUILTIN_WORDLISTS = {
-    "common": "wordlist.txt",
+    "quick": "dict/quick.txt",
+    "standard": "dict/standard.txt",
+    "full": "dict/full.txt",
 }
 
 
 def resolve_wordlist(name):
-    """解析字典名称 → 文件路径"""
     me = os.path.dirname(os.path.abspath(__file__))
 
     if name in BUILTIN_WORDLISTS:
         return os.path.join(me, BUILTIN_WORDLISTS[name])
 
-    # 搜索 dirsearch db 目录
-    ddb = os.path.join(me, "..", "dirsearch", "dirsearch-master", "dirsearch-master", "db")
-    if os.path.isdir(ddb):
-        # 直接匹配
-        for fname in os.listdir(ddb):
-            if fname == name + ".txt" or fname == name:
-                return os.path.join(ddb, fname)
-        # 递归搜索
-        for root, _dirs, files in os.walk(ddb):
-            for f in files:
-                if f == name + ".txt" or f == name:
-                    return os.path.join(root, f)
+    if os.path.exists(name):
+        return name
 
-    # 兜底：原样返回（可能是绝对路径）
-    return name
+    return os.path.join(me, "dict", f"{name}.txt")
 
 
 def list_available_wordlists():
-    """列出所有可用字典"""
-    entries = [("common", "内置测试字典")]
-    ddb = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                       "..", "dirsearch", "dirsearch-master", "dirsearch-master", "db")
-    if os.path.isdir(ddb):
-        for root, _dirs, files in os.walk(ddb):
-            for f in sorted(files):
-                if f.endswith(".txt"):
-                    name = f[:-4] if f.endswith(".txt") else f
-                    rel = os.path.relpath(os.path.join(root, f), ddb)
-                    entries.append((name, rel))
+    me = os.path.dirname(os.path.abspath(__file__))
+    entries = []
+    for name, rel in BUILTIN_WORDLISTS.items():
+        path = os.path.join(me, rel)
+        if os.path.exists(path):
+            lines = sum(1 for _ in open(path, encoding="utf-8", errors="ignore"))
+            entries.append((name, f"{lines:,} paths"))
     return entries
 
-
-# ─── MCP Server ────────────────────────────────────────────
 
 app = Server("scent")
 
@@ -105,11 +83,11 @@ async def list_tools():
 async def call_tool(name: str, arguments: dict):
     if name == "list_wordlists":
         entries = list_available_wordlists()
-        lines = [f"{e[0]:<25} {e[1]}" for e in entries]
-        return [TextContent(type="text", text=f"{len(entries)} 个可用字典:\n" + "\n".join(lines))]
+        lines = [f"  {e[0]:<15} {e[1]}" for e in entries]
+        return [TextContent(type="text", text="Available wordlists:\n" + "\n".join(lines))]
 
     elif name == "run_scan":
-        wordlist_path = resolve_wordlist(arguments["wordlist"])
+        wordlist_path = resolve_wordlist(arguments.get("wordlist", "quick"))
 
         exts = None
         if arguments.get("extensions"):
@@ -119,9 +97,9 @@ async def call_tool(name: str, arguments: dict):
 
         args = argparse.Namespace(
             url=arguments["url"],
-            method=arguments.get("method", "GET"),
-            concurrency=arguments.get("concurrency", 50),
-            timeout=5,
+            method="GET",
+            concurrency=arguments.get("concurrency", 20),
+            timeout=10,
             extension=arguments.get("extensions"),
             recursive=arguments.get("recursive", False),
             depth=arguments.get("depth", 3),
@@ -137,24 +115,37 @@ async def call_tool(name: str, arguments: dict):
             quiet=True,
             retries=3,
             crawl=False,
-            no_wildcard=arguments.get("no_wildcard", False),
+            wildcard=False,
+            no_wildcard=True,
             report=None,
             report_format="txt",
             data=None,
             delay=arguments.get("delay", 0),
             follow_redirect=False,
             recursion_status=None,
+            show_diff=False,
+            adaptive=False,
+            pattern_learn=False,
+            filter_sizes=None,
+            filter_status=None,
+            filter_time=None,
+            filter_text=None,
+            filter_regex=None,
+            filter_headers=None,
+            filter_redirect=None,
+            filter_mode="or",
+            match_status=None,
+            match_sizes=None,
+            match_time=None,
+            match_text=None,
+            match_regex=None,
+            match_headers=None,
+            matcher_mode="or",
         )
 
         headers = {"User-Agent": random_ua()}
-        ssl = None
-        proxy = None
-        include_status = set()
 
-        scanner = Scanner(args, proxy, ssl, headers, include_status, paths)
-
-        # 捕获扫描输出
-        captured = []
+        scanner = Scanner(args, None, None, headers, set(), paths, checkpoint_path=None)
 
         class _Capture:
             def __init__(self):
@@ -175,17 +166,15 @@ async def call_tool(name: str, arguments: dict):
         finally:
             sys.stdout = old_stdout
 
-        # 提取发现行
         results = []
         for line in cap.lines:
             s = line.strip()
-            if s and ("发现" in s or "[+]" in s):
+            if s and ("[+]" in s):
                 results.append(s)
 
         return [TextContent(type="text", text=
             f"target: {arguments['url']}\n"
-            f"wordlist: {arguments['wordlist']} ({len(paths)} paths)\n"
-            f"method: {arguments.get('method', 'GET')}\n"
+            f"wordlist: {arguments.get('wordlist', 'quick')} ({len(paths)} paths)\n"
             f"found: {scanner.cnt}  scanned: {scanner.scanned}\n"
             + "\n".join(results)
         )]
