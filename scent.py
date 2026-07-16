@@ -160,7 +160,22 @@ async def run_diff_mode(args):
 
 def main():
     # 1. 解析命令行参数
-    parser = argparse.ArgumentParser(description="scent v2.9 — feedback-driven web fuzzer")
+    parser = argparse.ArgumentParser(
+        description="scent v2.9 — feedback-driven web fuzzer",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""examples:
+  scent -u http://example.com                       默认快扫
+  scent -u http://example.com -w dict/full.txt      深度审计
+  scent -u http://example.com -e php,html,jsp       扩展名爆破
+  scent -u http://example.com -r                    递归扫描
+  scent -u http://example.com --match-status 200    只报告 200
+  scent -u http://example.com --filter-text "404"   排除含 404 的响应
+  scent -u http://example.com --pattern-learn       模式学习变体生成
+  scent -u http://example.com --crawl               爬取模式
+  scent -u http://example.com --adaptive            自适应速率
+  scent -u http://example.com --url-file urls.txt   批量扫描
+""",
+    )
     parser.add_argument("-u", "--url", help="目标URL，如 http://example.com")
     parser.add_argument("-w", "--wordlist", default="dict/quick.txt", help="字典文件路径（默认 dict/quick.txt）")
     parser.add_argument("-c", "--concurrency", type=int, default=20, help="并发数（默认 20）")
@@ -296,7 +311,7 @@ def main():
             print(f"[*] 加载 {len(urls)} 个目标")
         headers, include_status, ssl = build_context(args)
         asyncio.run(run_batch(urls, args, paths, headers, include_status, ssl))
-        
+
 
 if __name__ == "__main__":
     main()

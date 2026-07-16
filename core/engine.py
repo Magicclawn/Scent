@@ -408,7 +408,7 @@ class Scanner:
                     save_checkpoint(self, checkpoint_path)
                     tqdm.write(f"\n[*] 进度已保存到 {checkpoint_path}")
                     tqdm.write(f"[*] 已扫描 {self.scanned} 条，发现 {self.cnt} 个路径")
-                    tqdm.write(f"[*] 下次恢复: python main.py -u {self.url} -w ... --resume {checkpoint_path}")
+                    tqdm.write(f"[*] 下次恢复: python scent.py -u {self.url} -w ... --resume {checkpoint_path}")
                 else:
                     tqdm.write(f"\n[*] 扫描中断，已扫描 {self.scanned} 条，发现 {self.cnt} 个路径")
                 return

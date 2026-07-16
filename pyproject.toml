@@ -15,3 +15,6 @@ dependencies = [
     "colorama>=0.4",
     "tqdm>=4.64",
 ]
+
+[project.scripts]
+scent = "scent:main"

@@ -22,16 +22,16 @@
 
 ```bash
 # 默认字典 + 默认并发，零配置
-python main.py -u http://example.com
+python scent.py -u http://example.com
 
 # 日常快扫
-python main.py -u http://example.com -w dict/quick.txt
+python scent.py -u http://example.com -w dict/quick.txt
 
 # 深度审计
-python main.py -u http://example.com -w dict/full.txt -c 10
+python scent.py -u http://example.com -w dict/full.txt -c 10
 
 # 过滤 404，只看 200/403
-python main.py -u http://example.com --match-status 200,403
+python scent.py -u http://example.com --match-status 200,403
 ```
 
 ---
@@ -85,7 +85,7 @@ scent -u <url> --adaptive      自适应速率
 
 ```
 scent/
-  main.py             客户端入口
+  scent.py            客户端入口
   mcp_server.py        MCP 服务端
   testserver.py        全功能基准靶场 v4 (100+ 路由)
   run_test.py          自动化测试套件

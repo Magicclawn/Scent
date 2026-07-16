@@ -25,7 +25,7 @@ if sys.platform == "win32":
 TARGET = "http://127.0.0.1:18888"
 WORDLIST = "dict/quick.txt"
 BENCH_WORDLIST = "benchmark_wordlist.txt"
-SCANNER = "main.py"
+SCANNER = "scent.py"
 TESTSERVER = "testserver.py"
 
 
