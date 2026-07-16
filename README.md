@@ -59,6 +59,41 @@ scent -u <url> --adaptive      自适应速率
 
 ---
 
+## MCP Server
+
+把 scent 接入 AI 编码工具，让 AI 替你扫目录。
+
+### Claude Code
+
+`.claude/mcp.json`：
+
+```json
+"scent": {
+  "type": "stdio",
+  "command": "py",
+  "args": ["-3.12", "C:\\path\\to\\Scent\\mcp_server.py"]
+}
+```
+
+### OpenCode / Cursor / 其他 MCP 客户端
+
+```json
+"scent": {
+  "type": "stdio",
+  "command": "python",
+  "args": ["C:\\path\\to\\Scent\\mcp_server.py"]
+}
+```
+
+MCP 客户端默认配置文件名：
+- **OpenCode**: `.opencode/config.json`
+- **Cursor**: `.cursor/mcp.json`
+- **VS Code**: `.vscode/mcp.json`
+
+Python 路径按你的环境调整（`python3` / `py -3.12` / 完整路径均可）。
+
+---
+
 ## 字典
 
 | 字典 | 条数 | 共识度 | 用途 |
