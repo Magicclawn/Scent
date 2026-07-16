@@ -1,4 +1,4 @@
-"""scent MCP Server — expose web fuzzing to AI agents"""
+"""scent MCP Server — 通过 MCP 协议暴露目录扫描能力给 agent"""
 import argparse
 import asyncio
 import os
@@ -18,24 +18,24 @@ from core.engine import Scanner
 TOOLS = [
     Tool(
         name="run_scan",
-        description="Scan a target URL for hidden directories and files",
+        description="扫描目标URL，发现隐藏目录和文件",
         inputSchema={
             "type": "object",
             "properties": {
-                "url": {"type": "string", "description": "Target URL, e.g. http://example.com"},
-                "wordlist": {"type": "string", "description": "Wordlist name (quick/standard/full) or path to file"},
+                "url": {"type": "string", "description": "目标URL，例如 http://example.com"},
+                "wordlist": {"type": "string", "description": "字典名称 (quick/standard/full) 或文件路径"},
                 "concurrency": {"type": "integer", "default": 20},
-                "extensions": {"type": "string", "description": "Comma-separated extensions, e.g. php,html"},
+                "extensions": {"type": "string", "description": "逗号分隔的扩展名，例如 php,html"},
                 "recursive": {"type": "boolean", "default": False},
                 "depth": {"type": "integer", "default": 3},
-                "delay": {"type": "number", "default": 0, "description": "Delay between requests in seconds"},
+                "delay": {"type": "number", "default": 0, "description": "请求间隔（秒）"},
             },
             "required": ["url"],
         },
     ),
     Tool(
         name="list_wordlists",
-        description="List available built-in wordlists",
+        description="列出可用的内置字典",
         inputSchema={"type": "object", "properties": {}, "required": []},
     ),
 ]
@@ -67,7 +67,7 @@ def list_available_wordlists():
         path = os.path.join(me, rel)
         if os.path.exists(path):
             lines = sum(1 for _ in open(path, encoding="utf-8", errors="ignore"))
-            entries.append((name, f"{lines:,} paths"))
+            entries.append((name, f"{lines:,} 条路径"))
     return entries
 
 
@@ -84,7 +84,7 @@ async def call_tool(name: str, arguments: dict):
     if name == "list_wordlists":
         entries = list_available_wordlists()
         lines = [f"  {e[0]:<15} {e[1]}" for e in entries]
-        return [TextContent(type="text", text="Available wordlists:\n" + "\n".join(lines))]
+        return [TextContent(type="text", text="可用字典:\n" + "\n".join(lines))]
 
     elif name == "run_scan":
         wordlist_path = resolve_wordlist(arguments.get("wordlist", "quick"))
@@ -169,17 +169,17 @@ async def call_tool(name: str, arguments: dict):
         results = []
         for line in cap.lines:
             s = line.strip()
-            if s and ("[+]" in s):
+            if s and "[+]" in s:
                 results.append(s)
 
         return [TextContent(type="text", text=
-            f"target: {arguments['url']}\n"
-            f"wordlist: {arguments.get('wordlist', 'quick')} ({len(paths)} paths)\n"
-            f"found: {scanner.cnt}  scanned: {scanner.scanned}\n"
+            f"目标: {arguments['url']}\n"
+            f"字典: {arguments.get('wordlist', 'quick')} ({len(paths)} 条路径)\n"
+            f"发现: {scanner.cnt}  已扫描: {scanner.scanned}\n"
             + "\n".join(results)
         )]
 
-    raise ValueError(f"Unknown tool: {name}")
+    raise ValueError(f"未知工具: {name}")
 
 
 async def main():
